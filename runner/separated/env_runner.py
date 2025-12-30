@@ -1,15 +1,12 @@
-import time
 import os
-import numpy as np
+import time
 from itertools import chain
+
+import numpy as np
 import torch
 
-from utils.util import update_linear_schedule
 from runner.separated.base_runner import Runner
-
-
-def _t2n(x):
-    return x.detach().cpu().numpy()
+from utils.util import _t2n, update_linear_schedule
 
 
 class EnvRunner(Runner):
@@ -71,7 +68,7 @@ class EnvRunner(Runner):
             if episode % self.log_interval == 0:
                 end = time.time()
                 print(
-                    "\n Scenario {} Algo {} Exp {} updates {}/{} episodes, total num timesteps {}/{}, FPS {}.\n".format(
+                    "Scenario {} Algo {} Exp {} updates {}/{} episodes, total num timesteps {}/{}, FPS {}.".format(
                         self.all_args.scenario_name,
                         self.algorithm_name,
                         self.experiment_name,
@@ -143,7 +140,9 @@ class EnvRunner(Runner):
             # rearrange action
             if self.envs.action_space[agent_id].__class__.__name__ == "MultiDiscrete":
                 for i in range(self.envs.action_space[agent_id].shape):
-                    uc_action_env = np.eye(self.envs.action_space[agent_id].high[i] + 1)[action[:, i]]
+                    uc_action_env = np.eye(self.envs.action_space[agent_id].high[i] + 1)[
+                        action[:, i]
+                    ]
                     if i == 0:
                         action_env = uc_action_env
                     else:
@@ -257,17 +256,19 @@ class EnvRunner(Runner):
                     deterministic=True,
                 )
 
-                eval_action = eval_action.detach().cpu().numpy()
+                eval_action = _t2n(eval_action)
                 # rearrange action
                 if self.eval_envs.action_space[agent_id].__class__.__name__ == "MultiDiscrete":
                     for i in range(self.eval_envs.action_space[agent_id].shape):
-                        eval_uc_action_env = np.eye(self.eval_envs.action_space[agent_id].high[i] + 1)[
-                            eval_action[:, i]
-                        ]
+                        eval_uc_action_env = np.eye(
+                            self.eval_envs.action_space[agent_id].high[i] + 1
+                        )[eval_action[:, i]]
                         if i == 0:
                             eval_action_env = eval_uc_action_env
                         else:
-                            eval_action_env = np.concatenate((eval_action_env, eval_uc_action_env), axis=1)
+                            eval_action_env = np.concatenate(
+                                (eval_action_env, eval_uc_action_env), axis=1
+                            )
                 elif self.eval_envs.action_space[agent_id].__class__.__name__ == "Discrete":
                     eval_action_env = np.squeeze(
                         np.eye(self.eval_envs.action_space[agent_id].n)[eval_action], 1
@@ -294,16 +295,25 @@ class EnvRunner(Runner):
                 ((eval_dones == True).sum(), self.recurrent_N, self.hidden_size),
                 dtype=np.float32,
             )
-            eval_masks = np.ones((self.n_eval_rollout_threads, self.num_agents, 1), dtype=np.float32)
-            eval_masks[eval_dones == True] = np.zeros(((eval_dones == True).sum(), 1), dtype=np.float32)
+            eval_masks = np.ones(
+                (self.n_eval_rollout_threads, self.num_agents, 1), dtype=np.float32
+            )
+            eval_masks[eval_dones == True] = np.zeros(
+                ((eval_dones == True).sum(), 1), dtype=np.float32
+            )
 
         eval_episode_rewards = np.array(eval_episode_rewards)
 
         eval_train_infos = []
         for agent_id in range(self.num_agents):
-            eval_average_episode_rewards = np.mean(np.sum(eval_episode_rewards[:, :, agent_id], axis=0))
+            eval_average_episode_rewards = np.mean(
+                np.sum(eval_episode_rewards[:, :, agent_id], axis=0)
+            )
             eval_train_infos.append({"eval_average_episode_rewards": eval_average_episode_rewards})
-            print("eval average episode rewards of agent%i: " % agent_id + str(eval_average_episode_rewards))
+            print(
+                "eval average episode rewards of agent%i: " % agent_id
+                + str(eval_average_episode_rewards)
+            )
 
         self.log_train(eval_train_infos, total_num_steps)
 
@@ -343,17 +353,21 @@ class EnvRunner(Runner):
                         deterministic=True,
                     )
 
-                    action = action.detach().cpu().numpy()
+                    action = _t2n(action)
                     # rearrange action
                     if self.envs.action_space[agent_id].__class__.__name__ == "MultiDiscrete":
                         for i in range(self.envs.action_space[agent_id].shape):
-                            uc_action_env = np.eye(self.envs.action_space[agent_id].high[i] + 1)[action[:, i]]
+                            uc_action_env = np.eye(self.envs.action_space[agent_id].high[i] + 1)[
+                                action[:, i]
+                            ]
                             if i == 0:
                                 action_env = uc_action_env
                             else:
                                 action_env = np.concatenate((action_env, uc_action_env), axis=1)
                     elif self.envs.action_space[agent_id].__class__.__name__ == "Discrete":
-                        action_env = np.squeeze(np.eye(self.envs.action_space[agent_id].n)[action], 1)
+                        action_env = np.squeeze(
+                            np.eye(self.envs.action_space[agent_id].n)[action], 1
+                        )
                     else:
                         raise NotImplementedError
 
@@ -390,7 +404,10 @@ class EnvRunner(Runner):
             episode_rewards = np.array(episode_rewards)
             for agent_id in range(self.num_agents):
                 average_episode_rewards = np.mean(np.sum(episode_rewards[:, :, agent_id], axis=0))
-                print("eval average episode rewards of agent%i: " % agent_id + str(average_episode_rewards))
+                print(
+                    "eval average episode rewards of agent%i: " % agent_id
+                    + str(average_episode_rewards)
+                )
 
         if self.all_args.save_gifs:
             imageio.mimsave(

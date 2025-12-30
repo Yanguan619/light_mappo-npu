@@ -1,0 +1,6 @@
+setproctitle
+numpy==1.26.4
+tensorboardX
+torch==2.1.0
+torch-npu==2.1.0.post17
+gymnasium

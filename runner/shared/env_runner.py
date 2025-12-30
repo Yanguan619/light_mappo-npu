@@ -6,15 +6,12 @@
 """
 
 import time
+
 import numpy as np
 import torch
+
 from runner.shared.base_runner import Runner
-
-# import imageio
-
-
-def _t2n(x):
-    return x.detach().cpu().numpy()
+from utils.util import _t2n
 
 
 class EnvRunner(Runner):
@@ -77,7 +74,7 @@ class EnvRunner(Runner):
             if episode % self.log_interval == 0:
                 end = time.time()
                 print(
-                    "\n Scenario {} Algo {} Exp {} updates {}/{} episodes, total num timesteps {}/{}, FPS {}.\n".format(
+                    "Scenario {} Algo {} Exp {} updates {}/{} episodes, total num timesteps {}/{}, FPS {}.".format(
                         self.all_args.scenario_name,
                         self.algorithm_name,
                         self.experiment_name,
@@ -99,8 +96,12 @@ class EnvRunner(Runner):
                 #         agent_k = 'agent%i/individual_rewards' % agent_id
                 #         env_infos[agent_k] = idv_rews
 
-                train_infos["average_episode_rewards"] = np.mean(self.buffer.rewards) * self.episode_length
-                print("average episode rewards is {}".format(train_infos["average_episode_rewards"]))
+                train_infos["average_episode_rewards"] = (
+                    np.mean(self.buffer.rewards) * self.episode_length
+                )
+                print(
+                    "average episode rewards is {}".format(train_infos["average_episode_rewards"])
+                )
                 self.log_train(train_infos, total_num_steps)
                 # self.log_env(env_infos, total_num_steps)
 
@@ -114,7 +115,9 @@ class EnvRunner(Runner):
 
         # replay buffer
         if self.use_centralized_V:
-            share_obs = obs.reshape(self.n_rollout_threads, -1)  # shape = [env_num, agent_num * obs_dim]
+            share_obs = obs.reshape(
+                self.n_rollout_threads, -1
+            )  # shape = [env_num, agent_num * obs_dim]
             share_obs = np.expand_dims(share_obs, 1).repeat(
                 self.num_agents, axis=1
             )  # shape = shape = [env_num, agent_num， agent_num * obs_dim]
@@ -142,7 +145,9 @@ class EnvRunner(Runner):
         )
         # [self.envs, agents, dim]
         values = np.array(np.split(_t2n(value), self.n_rollout_threads))  # [env_num, agent_num, 1]
-        actions = np.array(np.split(_t2n(action), self.n_rollout_threads))  # [env_num, agent_num, action_dim]
+        actions = np.array(
+            np.split(_t2n(action), self.n_rollout_threads)
+        )  # [env_num, agent_num, action_dim]
         action_log_probs = np.array(
             np.split(_t2n(action_log_prob), self.n_rollout_threads)
         )  # [env_num, agent_num, 1]
@@ -250,9 +255,13 @@ class EnvRunner(Runner):
                     if i == 0:
                         eval_actions_env = eval_uc_actions_env
                     else:
-                        eval_actions_env = np.concatenate((eval_actions_env, eval_uc_actions_env), axis=2)
+                        eval_actions_env = np.concatenate(
+                            (eval_actions_env, eval_uc_actions_env), axis=2
+                        )
             elif self.eval_envs.action_space[0].__class__.__name__ == "Discrete":
-                eval_actions_env = np.squeeze(np.eye(self.eval_envs.action_space[0].n)[eval_actions], 2)
+                eval_actions_env = np.squeeze(
+                    np.eye(self.eval_envs.action_space[0].n)[eval_actions], 2
+                )
             else:
                 raise NotImplementedError
 
@@ -264,12 +273,18 @@ class EnvRunner(Runner):
                 ((eval_dones == True).sum(), self.recurrent_N, self.hidden_size),
                 dtype=np.float32,
             )
-            eval_masks = np.ones((self.n_eval_rollout_threads, self.num_agents, 1), dtype=np.float32)
-            eval_masks[eval_dones == True] = np.zeros(((eval_dones == True).sum(), 1), dtype=np.float32)
+            eval_masks = np.ones(
+                (self.n_eval_rollout_threads, self.num_agents, 1), dtype=np.float32
+            )
+            eval_masks[eval_dones == True] = np.zeros(
+                ((eval_dones == True).sum(), 1), dtype=np.float32
+            )
 
         eval_episode_rewards = np.array(eval_episode_rewards)
         eval_env_infos = {}
-        eval_env_infos["eval_average_episode_rewards"] = np.sum(np.array(eval_episode_rewards), axis=0)
+        eval_env_infos["eval_average_episode_rewards"] = np.sum(
+            np.array(eval_episode_rewards), axis=0
+        )
         eval_average_episode_rewards = np.mean(eval_env_infos["eval_average_episode_rewards"])
         print("eval average episode rewards of agent: " + str(eval_average_episode_rewards))
         self.log_env(eval_env_infos, total_num_steps)
@@ -347,7 +362,10 @@ class EnvRunner(Runner):
                 else:
                     envs.render("human")
 
-            print("average episode rewards is: " + str(np.mean(np.sum(np.array(episode_rewards), axis=0))))
+            print(
+                "average episode rewards is: "
+                + str(np.mean(np.sum(np.array(episode_rewards), axis=0)))
+            )
 
         # if self.all_args.save_gifs:
         #     imageio.mimsave(str(self.gif_dir) + '/render.gif', all_frames, duration=self.all_args.ifi)

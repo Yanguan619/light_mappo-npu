@@ -1,16 +1,11 @@
-import time
 import os
+
 import numpy as np
-from itertools import chain
 import torch
 from tensorboardX import SummaryWriter
 
 from utils.separated_buffer import SeparatedReplayBuffer
-from utils.util import update_linear_schedule
-
-
-def _t2n(x):
-    return x.detach().cpu().numpy()
+from utils.util import _t2n
 
 
 class Runner(object):
@@ -46,8 +41,6 @@ class Runner(object):
         self.model_dir = self.all_args.model_dir
 
         if self.use_render:
-            import imageio
-
             self.run_dir = config["run_dir"]
             self.gif_dir = str(self.run_dir / "gifs")
             if not os.path.exists(self.gif_dir):
@@ -130,7 +123,9 @@ class Runner(object):
                 self.buffer[agent_id].masks[-1],
             )
             next_value = _t2n(next_value)
-            self.buffer[agent_id].compute_returns(next_value, self.trainer[agent_id].value_normalizer)
+            self.buffer[agent_id].compute_returns(
+                next_value, self.trainer[agent_id].value_normalizer
+            )
 
     def train(self):
         train_infos = []
@@ -157,7 +152,9 @@ class Runner(object):
 
     def restore(self):
         for agent_id in range(self.num_agents):
-            policy_actor_state_dict = torch.load(str(self.model_dir) + "/actor_agent" + str(agent_id) + ".pt")
+            policy_actor_state_dict = torch.load(
+                str(self.model_dir) + "/actor_agent" + str(agent_id) + ".pt"
+            )
             self.policy[agent_id].actor.load_state_dict(policy_actor_state_dict)
             policy_critic_state_dict = torch.load(
                 str(self.model_dir) + "/critic_agent" + str(agent_id) + ".pt"

@@ -5,10 +5,9 @@
 # @File    : env_discrete.py
 """
 
-import gym
-from gym import spaces
 import numpy as np
 from envs.env_core import EnvCore
+from gymnasium import spaces
 
 
 class DiscreteActionEnv(object):
@@ -73,7 +72,9 @@ class DiscreteActionEnv(object):
             )  # [-inf,inf]
 
         self.share_observation_space = [
-            spaces.Box(low=-np.inf, high=+np.inf, shape=(share_obs_dim,), dtype=np.float32)
+            spaces.Box(
+                low=-np.inf, high=+np.inf, shape=(share_obs_dim,), dtype=np.float32
+            )
             for _ in range(self.num_agent)
         ]
 
@@ -133,7 +134,12 @@ class MultiDiscrete:
         """Returns a array with one sample from each discrete action space"""
         # For each row: round(random .* (max - min) + min, 0)
         random_array = np.random.rand(self.num_discrete_space)
-        return [int(x) for x in np.floor(np.multiply((self.high - self.low + 1.0), random_array) + self.low)]
+        return [
+            int(x)
+            for x in np.floor(
+                np.multiply((self.high - self.low + 1.0), random_array) + self.low
+            )
+        ]
 
     def contains(self, x):
         return (
@@ -150,7 +156,9 @@ class MultiDiscrete:
         return "MultiDiscrete" + str(self.num_discrete_space)
 
     def __eq__(self, other):
-        return np.array_equal(self.low, other.low) and np.array_equal(self.high, other.high)
+        return np.array_equal(self.low, other.low) and np.array_equal(
+            self.high, other.high
+        )
 
 
 if __name__ == "__main__":

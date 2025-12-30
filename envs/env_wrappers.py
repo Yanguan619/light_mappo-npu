@@ -8,6 +8,7 @@ Modified from OpenAI Baselines code to work with multi-agent envs
 
 import numpy as np
 
+
 # single env
 class DummyVecEnv():
     def __init__(self, env_fns):

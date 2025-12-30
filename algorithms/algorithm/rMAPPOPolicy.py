@@ -6,6 +6,7 @@
 """
 
 import torch
+
 from algorithms.algorithm.r_actor_critic import R_Actor, R_Critic
 from utils.util import update_linear_schedule
 
@@ -21,7 +22,7 @@ class RMAPPOPolicy:
     :param device: (torch.device) specifies the device to run on (cpu/gpu).
     """
 
-    def __init__(self, args, obs_space, cent_obs_space, act_space, device=torch.device("cpu")):
+    def __init__(self, args, obs_space, cent_obs_space, act_space, device: torch.device):
         self.device = device
         self.lr = args.lr
         self.critic_lr = args.critic_lr

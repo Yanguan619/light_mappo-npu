@@ -40,7 +40,7 @@ class SeparatedReplayBuffer(object):
 
         self.value_preds = np.zeros((self.episode_length + 1, self.n_rollout_threads, 1), dtype=np.float32)
         self.returns = np.zeros((self.episode_length + 1, self.n_rollout_threads, 1), dtype=np.float32)
-        
+
         if act_space.__class__.__name__ == 'Discrete':
             self.available_actions = np.ones((self.episode_length + 1, self.n_rollout_threads, act_space.n), dtype=np.float32)
         else:
@@ -51,7 +51,7 @@ class SeparatedReplayBuffer(object):
         self.actions = np.zeros((self.episode_length, self.n_rollout_threads, act_shape), dtype=np.float32)
         self.action_log_probs = np.zeros((self.episode_length, self.n_rollout_threads, act_shape), dtype=np.float32)
         self.rewards = np.zeros((self.episode_length, self.n_rollout_threads, 1), dtype=np.float32)
-        
+
         self.masks = np.ones((self.episode_length + 1, self.n_rollout_threads, 1), dtype=np.float32)
         self.bad_masks = np.ones_like(self.masks)
         self.active_masks = np.ones_like(self.masks)
@@ -97,7 +97,7 @@ class SeparatedReplayBuffer(object):
             self.available_actions[self.step] = available_actions.copy()
 
         self.step = (self.step + 1) % self.episode_length
-    
+
     def after_update(self):
         self.share_obs[0] = self.share_obs[-1].copy()
         self.obs[0] = self.obs[-1].copy()
@@ -172,7 +172,7 @@ class SeparatedReplayBuffer(object):
                           num_mini_batch))
             mini_batch_size = batch_size // num_mini_batch
 
-        rand = torch.randperm(batch_size).numpy()
+        rand = torch.randperm(batch_size).cpu().numpy()
         sampler = [rand[i*mini_batch_size:(i+1)*mini_batch_size] for i in range(num_mini_batch)]
 
         share_obs = self.share_obs[:-1].reshape(-1, *self.share_obs.shape[2:])

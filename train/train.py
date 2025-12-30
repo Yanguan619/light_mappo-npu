@@ -5,23 +5,30 @@
 # @File    : train.py
 """
 
-# !/usr/bin/env python
-import sys
 import os
-import socket
-import setproctitle
-import numpy as np
+import sys
 from pathlib import Path
+
+import numpy as np
+import setproctitle
 import torch
 
 # Get the parent directory of the current file
 parent_dir = os.path.abspath(os.path.join(os.getcwd(), "."))
-
 # Append the parent directory to sys.path, otherwise the following import will fail
 sys.path.append(parent_dir)
 
-from config import get_config
+from config_mappo import get_config
 from envs.env_wrappers import DummyVecEnv
+
+NPU_IS_AVAILABLE = False
+try:
+    import torch_npu
+
+    NPU_IS_AVAILABLE = True
+except ImportError:
+    print("torch_npu is not found.")
+
 
 """Train script for MPEs."""
 
@@ -67,12 +74,18 @@ def make_eval_env(all_args):
 
 
 def parse_args(args, parser):
-    parser.add_argument("--scenario_name", type=str, default="MyEnv", help="Which scenario to run on")
+    parser.add_argument(
+        "--scenario_name", type=str, default="MyEnv", help="Which scenario to run on"
+    )
     parser.add_argument("--num_landmarks", type=int, default=3)
     parser.add_argument("--num_agents", type=int, default=2, help="number of players")
 
     all_args = parser.parse_known_args(args)[0]
-
+    print("=" * 70)
+    for k, v in all_args.__dict__.items():
+        if v is not None:
+            print(f"{k:<30} = {v:<20}")
+    print("=" * 70)
     return all_args
 
 
@@ -81,31 +94,35 @@ def main(args):
     all_args = parse_args(args, parser)
 
     if all_args.algorithm_name == "rmappo":
-        assert all_args.use_recurrent_policy or all_args.use_naive_recurrent_policy, "check recurrent policy!"
+        assert all_args.use_recurrent_policy or all_args.use_naive_recurrent_policy, (
+            "check recurrent policy!"
+        )
     elif all_args.algorithm_name == "mappo":
-        assert (
-            all_args.use_recurrent_policy == False and all_args.use_naive_recurrent_policy == False
-        ), "check recurrent policy!"
+        assert not all_args.use_recurrent_policy and not all_args.use_naive_recurrent_policy, (
+            "check recurrent policy!"
+        )
     else:
         raise NotImplementedError
 
-    assert (
-        all_args.share_policy == True and all_args.scenario_name == "simple_speaker_listener"
-    ) == False, "The simple_speaker_listener scenario can not use shared policy. Please check the config.py."
+    assert not (all_args.share_policy and all_args.scenario_name == "simple_speaker_listener"), (
+        "The simple_speaker_listener scenario can not use shared policy. Please check the config.py."
+    )
 
-    # cuda
-    if all_args.cuda and torch.cuda.is_available():
-        print("choose to use gpu...")
-        device = torch.device("cuda:0")
-        torch.set_num_threads(all_args.n_training_threads)
+    device = "cpu"
+    if all_args.cuda:
+        if torch.cuda.is_available():
+            device = "cuda:0"
+        if NPU_IS_AVAILABLE:
+            if torch_npu.npu.is_available():
+                device = "npu:0"
+                torch_npu.npu.set_compile_mode(jit_compile=False)
         if all_args.cuda_deterministic:
             torch.backends.cudnn.benchmark = False
             torch.backends.cudnn.deterministic = True
-    else:
-        print("choose to use cpu...")
-        device = torch.device("cpu")
-        torch.set_num_threads(all_args.n_training_threads)
-
+    device = torch.device(device)
+    print(f"Choose device: {device}")
+    torch.set_default_device(device)
+    torch.set_num_threads(all_args.n_training_threads)
     # run dir
     run_dir = (
         Path(os.path.split(os.path.dirname(os.path.abspath(__file__)))[0] + "/results")
@@ -115,7 +132,7 @@ def main(args):
         / all_args.experiment_name
     )
     if not run_dir.exists():
-        os.makedirs(str(run_dir))
+        run_dir.mkdir(parents=True, exist_ok=True)
 
     if not run_dir.exists():
         curr_run = "run1"
@@ -131,7 +148,7 @@ def main(args):
             curr_run = "run%i" % (max(exst_run_nums) + 1)
     run_dir = run_dir / curr_run
     if not run_dir.exists():
-        os.makedirs(str(run_dir))
+        run_dir.mkdir(parents=True, exist_ok=True)
 
     setproctitle.setproctitle(
         str(all_args.algorithm_name)
@@ -144,9 +161,10 @@ def main(args):
     )
 
     # seed
+    np.random.seed(all_args.seed)
     torch.manual_seed(all_args.seed)
     torch.cuda.manual_seed_all(all_args.seed)
-    np.random.seed(all_args.seed)
+    torch_npu.npu.manual_seed_all(all_args.seed)
 
     # env init
     envs = make_train_env(all_args)
