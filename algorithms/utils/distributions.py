@@ -3,7 +3,7 @@ import torch.nn as nn
 from .util import init
 
 """
-Modify standard PyTorch distributions so they to make compatible with this codebase. 
+Modify standard PyTorch distributions so they to make compatible with this codebase.
 """
 
 #
@@ -56,7 +56,7 @@ class Categorical(nn.Module):
     def __init__(self, num_inputs, num_outputs, use_orthogonal=True, gain=0.01):
         super(Categorical, self).__init__()
         init_method = [nn.init.xavier_uniform_, nn.init.orthogonal_][use_orthogonal]
-        def init_(m): 
+        def init_(m):
             return init(m, init_method, lambda x: nn.init.constant_(x, 0), gain)
 
         self.linear = init_(nn.Linear(num_inputs, num_outputs))
@@ -73,19 +73,17 @@ class DiagGaussian(nn.Module):
         super(DiagGaussian, self).__init__()
 
         init_method = [nn.init.xavier_uniform_, nn.init.orthogonal_][use_orthogonal]
-        def init_(m): 
+        def init_(m):
             return init(m, init_method, lambda x: nn.init.constant_(x, 0), gain)
 
         self.fc_mean = init_(nn.Linear(num_inputs, num_outputs))
         self.logstd = AddBias(torch.zeros(num_outputs))
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor):
         action_mean = self.fc_mean(x)
 
         #  An ugly hack for my KFAC implementation.
-        zeros = torch.zeros(action_mean.size())
-        if x.is_cuda:
-            zeros = zeros.cuda()
+        zeros = torch.zeros(action_mean.size(),device=x.device)
 
         action_logstd = self.logstd(zeros)
         return FixedNormal(action_mean, action_logstd.exp())
@@ -95,9 +93,9 @@ class Bernoulli(nn.Module):
     def __init__(self, num_inputs, num_outputs, use_orthogonal=True, gain=0.01):
         super(Bernoulli, self).__init__()
         init_method = [nn.init.xavier_uniform_, nn.init.orthogonal_][use_orthogonal]
-        def init_(m): 
+        def init_(m):
             return init(m, init_method, lambda x: nn.init.constant_(x, 0), gain)
-        
+
         self.linear = init_(nn.Linear(num_inputs, num_outputs))
 
     def forward(self, x):
