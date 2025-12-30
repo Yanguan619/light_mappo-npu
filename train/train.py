@@ -24,8 +24,9 @@ from envs.env_wrappers import DummyVecEnv
 NPU_IS_AVAILABLE = False
 try:
     import torch_npu
-
-    NPU_IS_AVAILABLE = True
+    torch_npu.npu.set_compile_mode(jit_compile=False)
+    torch_npu.npu.manual_seed_all(0)
+    NPU_IS_AVAILABLE = torch_npu.npu.is_available()
 except ImportError:
     print("torch_npu is not found.")
 
@@ -113,9 +114,7 @@ def main(args):
         if torch.cuda.is_available():
             device = "cuda:0"
         if NPU_IS_AVAILABLE:
-            if torch_npu.npu.is_available():
-                device = "npu:0"
-                torch_npu.npu.set_compile_mode(jit_compile=False)
+            device = "npu:0"
         if all_args.cuda_deterministic:
             torch.backends.cudnn.benchmark = False
             torch.backends.cudnn.deterministic = True
@@ -164,7 +163,7 @@ def main(args):
     np.random.seed(all_args.seed)
     torch.manual_seed(all_args.seed)
     torch.cuda.manual_seed_all(all_args.seed)
-    torch_npu.npu.manual_seed_all(all_args.seed)
+
 
     # env init
     envs = make_train_env(all_args)
