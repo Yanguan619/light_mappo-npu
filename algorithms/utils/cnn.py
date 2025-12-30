@@ -1,7 +1,9 @@
 import torch.nn as nn
+
 from .util import init
 
 """CNN Modules and utils."""
+
 
 class Flatten(nn.Module):
     def forward(self, x):
@@ -14,7 +16,7 @@ class CNNLayer(nn.Module):
 
         active_func = [nn.Tanh(), nn.ReLU()][use_ReLU]
         init_method = [nn.init.xavier_uniform_, nn.init.orthogonal_][use_orthogonal]
-        gain = nn.init.calculate_gain(['tanh', 'relu'][use_ReLU])
+        gain = nn.init.calculate_gain(["tanh", "relu"][use_ReLU])
 
         def init_(m):
             return init(m, init_method, lambda x: nn.init.constant_(x, 0), gain=gain)
@@ -24,18 +26,29 @@ class CNNLayer(nn.Module):
         input_height = obs_shape[2]
 
         self.cnn = nn.Sequential(
-            init_(nn.Conv2d(in_channels=input_channel,
-                            out_channels=hidden_size // 2,
-                            kernel_size=kernel_size,
-                            stride=stride)
-                  ),
+            init_(
+                nn.Conv2d(
+                    in_channels=input_channel,
+                    out_channels=hidden_size // 2,
+                    kernel_size=kernel_size,
+                    stride=stride,
+                )
+            ),
             active_func,
             Flatten(),
-            init_(nn.Linear(hidden_size // 2 * (input_width - kernel_size + stride) * (input_height - kernel_size + stride),
-                            hidden_size)
-                  ),
+            init_(
+                nn.Linear(
+                    hidden_size
+                    // 2
+                    * (input_width - kernel_size + stride)
+                    * (input_height - kernel_size + stride),
+                    hidden_size,
+                )
+            ),
             active_func,
-            init_(nn.Linear(hidden_size, hidden_size)), active_func)
+            init_(nn.Linear(hidden_size, hidden_size)),
+            active_func,
+        )
 
     def forward(self, x):
         x = x / 255.0

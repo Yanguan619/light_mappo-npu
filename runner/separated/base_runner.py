@@ -4,6 +4,8 @@ import numpy as np
 import torch
 from tensorboardX import SummaryWriter
 
+from algorithms.algorithm.r_mappo import RMAPPO as TrainAlgo
+from algorithms.algorithm.rMAPPOPolicy import RMAPPOPolicy as Policy
 from utils.separated_buffer import SeparatedReplayBuffer
 from utils.util import _t2n
 
@@ -58,10 +60,7 @@ class Runner(object):
             if not os.path.exists(self.save_dir):
                 os.makedirs(self.save_dir)
 
-        from algorithms.algorithm.r_mappo import RMAPPO as TrainAlgo
-        from algorithms.algorithm.rMAPPOPolicy import RMAPPOPolicy as Policy
-
-        self.policy = []
+        self.policy: list[Policy] = []
         for agent_id in range(self.num_agents):
             share_observation_space = (
                 self.envs.share_observation_space[agent_id]

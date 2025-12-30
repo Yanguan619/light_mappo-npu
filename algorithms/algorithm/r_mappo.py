@@ -9,7 +9,9 @@ import numpy as np
 import torch
 import torch.nn as nn
 
+from algorithms.algorithm.rMAPPOPolicy import RMAPPOPolicy
 from algorithms.utils.util import check
+from utils.shared_buffer import SharedReplayBuffer
 from utils.util import get_gard_norm, huber_loss, mse_loss
 from utils.valuenorm import ValueNorm
 
@@ -22,7 +24,7 @@ class RMAPPO:
     :param device: (torch.device) specifies the device to run on (cpu/gpu).
     """
 
-    def __init__(self, args, policy, device: torch.device):
+    def __init__(self, args, policy: RMAPPOPolicy, device: torch.device):
         self.device = device
         self.tpdv = dict(dtype=torch.float32, device=device)
         self.policy = policy
@@ -46,7 +48,7 @@ class RMAPPO:
         self._use_value_active_masks = args.use_value_active_masks
         self._use_policy_active_masks = args.use_policy_active_masks
 
-        assert (self._use_popart and self._use_valuenorm) == False, (
+        assert not (self._use_popart and self._use_valuenorm), (
             "self._use_popart and self._use_valuenorm can not be set True simultaneously"
         )
 
@@ -191,7 +193,7 @@ class RMAPPO:
 
         return value_loss, critic_grad_norm, policy_loss, dist_entropy, actor_grad_norm, imp_weights
 
-    def train(self, buffer, update_actor=True):
+    def train(self, buffer: SharedReplayBuffer, update_actor=True):
         """
         Perform a training update using minibatch GD.
         :param buffer: (SharedReplayBuffer) buffer containing training data.
